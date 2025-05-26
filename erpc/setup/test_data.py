@@ -84,6 +84,15 @@ class Setup:
 			warehouse.warehouse_name = warehouse.name = next(name)
 			warehouse.insert()
 
+	def setup_customers(self):
+		name = name_generator(CUSTOMER_NAME, 6)
+		template = frappe.new_doc("Customer", customer_group=get_root_of("Customer Group"))
+
+		for _ in tqdm.tqdm(range(self.n_warehouses * self.customers_per_warehosue)):
+			customer = deepcopy(template)
+			customer.customer_name = next(name)
+			customer.insert()
+
 
 def name_generator(series: str, digits):
 	i = 0
