@@ -13,15 +13,16 @@ COMPANY_NAME = "The Company"
 ITEM_NAME = "I-{}"
 WAREHOUSE_NAME = "WH-{}"
 CUSTOMER_NAME = "C-{}"
-USER_NAME = "U-{}@erpc.org"
+USER_NAME = "u-{}@erpc.local"
 
 
 @dataclass
 class Setup:
-	n_items: int = 100_000
+	n_items: int = 10_000  # TPC-C says 100k, but smaller number will trigger contention faster
 	n_warehouses: int = 10  # Note: This is only real "scaling factor" that should be used.
 	users_per_warehouse: int = 10
-	customers_per_warehosue: int = 30_000
+	# TPC-C says 30,000, but this number is meaningless from ERPNExt POV
+	customers_per_warehosue: int = 3000
 
 	def __post_init__(self):
 		frappe.flags.in_import = 1
