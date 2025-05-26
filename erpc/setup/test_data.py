@@ -63,13 +63,26 @@ class Setup:
 		frappe.clear_cache()
 
 	def setup_items(self):
-		name = name_generator("ERPC-ITEM-{}", 6)
-		template_item = frappe.new_doc("Item", is_stock_item=True, item_group=get_root_of("Item Group"))
+		name = name_generator(ITEM_NAME, 6)
+		template = frappe.new_doc("Item", is_stock_item=True, item_group=get_root_of("Item Group"))
 
 		for _ in tqdm.tqdm(range(self.n_items)):
-			item = deepcopy(template_item)
+			item = deepcopy(template)
 			item.item_code = item.name = next(name)
 			item.insert()
+
+	def setup_warehouses(self):
+		name = name_generator(WAREHOUSE_NAME, 4)
+		template = frappe.new_doc(
+			"Warehouse",
+			parent_warehouse=get_root_of("Warehouse"),
+			company=COMPANY_NAME,
+		)
+
+		for _ in tqdm.tqdm(range(self.n_warehouses)):
+			warehouse = deepcopy(template)
+			warehouse.warehouse_name = warehouse.name = next(name)
+			warehouse.insert()
 
 
 def name_generator(series: str, digits):
