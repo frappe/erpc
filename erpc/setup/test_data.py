@@ -75,7 +75,7 @@ class Setup:
 		def item_generator():
 			for _ in tqdm.tqdm(range(self.n_items - 1)):
 				item = deepcopy(template)
-				item.name = item.item_code = next(name)
+				item.name = item.item_code = item.item_name = next(name)
 				yield item
 
 		bulk_insert("Item", item_generator(), chunk_size=1000, commit_chunks=True)
