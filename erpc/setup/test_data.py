@@ -67,11 +67,14 @@ class Setup:
 		template = frappe.new_doc("Item", is_stock_item=True, item_group=get_root_of("Item Group"))
 
 		frappe.flags.in_import = True
-		for _ in tqdm.tqdm(range(self.n_items)):
+		for i in tqdm.tqdm(range(self.n_items)):
 			item = deepcopy(template)
 			item.item_code = item.name = next(name)
 			item.insert()
+			if i % 1000 == 0:
+				frappe.db.commit()
 		frappe.flags.in_import = False
+		frappe.db.commit()
 
 	def setup_warehouses(self):
 		name = name_generator(WAREHOUSE_NAME, 4)
@@ -91,11 +94,15 @@ class Setup:
 		template = frappe.new_doc("Customer", customer_group=get_root_of("Customer Group"))
 
 		frappe.flags.in_import = True
-		for _ in tqdm.tqdm(range(self.n_warehouses * self.customers_per_warehosue)):
+		for i in tqdm.tqdm(range(self.n_warehouses * self.customers_per_warehosue)):
 			customer = deepcopy(template)
 			customer.customer_name = next(name)
 			customer.insert()
+			if i % 1000 == 0:
+				frappe.db.commit()
+
 		frappe.flags.in_import = False
+		frappe.db.commit()
 
 
 def name_generator(series: str, digits):
