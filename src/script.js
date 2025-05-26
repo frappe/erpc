@@ -2,7 +2,11 @@ import http from "k6/http";
 import { check, sleep } from "k6";
 
 const BASE_URL = "http://erpc.localhost:8000";
-const NUM_USERS = 10;
+const NUM_ITEMS = 10000;
+const NUM_WAREHOUSES = 10;
+const NUM_CUSTOMERS = 3000 * NUM_WAREHOUSES;
+const NUM_USERS = 1 * NUM_WAREHOUSES;
+const COMPANY = "The Company";
 
 export function setup() {
 	// login every user and remember credentials
@@ -20,21 +24,30 @@ export function setup() {
 
 			sids.push(res.cookies.sid[0].value);
 		});
-	return sids;
+
+	const items = Array.from(Array(NUM_ITEMS).keys()).map(
+		(i) => `I-${String(i + 1).padStart(6, "0")}`
+	);
+	const warehouses = Array.from(Array(NUM_WAREHOUSES).keys()).map(
+		(i) => `WH-${String(i + 1).padStart(4, "0")}`
+	);
+
+	const customers = Array.from(Array(NUM_CUSTOMERS).keys()).map(
+		(i) => `C-${String(i + 1).padStart(6, "0")}`
+	);
+	return { sids, items, warehouses, customers };
 }
 
 export default function (data) {
-	if (data.length != NUM_USERS) {
+	if (data.sids.length != NUM_USERS) {
 		console.error("SIDs not available. VU cannot proceed.");
 	}
 	const jar = http.cookieJar();
-	jar.set(BASE_URL, "sid", data[__VU - 1]);
+	jar.set(BASE_URL, "sid", data.sids[__VU - 1]);
 
 	let res = http.get(`${BASE_URL}/api/method/ping`);
 	check(res, {
 		"status is 200": (r) => r.status === 200,
-		"Same cookie is sent back": (r) => r.cookies.sid?.[0]?.value == data[__VU - 1],
+		"Same cookie is sent back": (r) => r.cookies.sid?.[0]?.value == data.sids[__VU - 1],
 	});
-
-	sleep(1);
 }
