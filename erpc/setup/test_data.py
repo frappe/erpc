@@ -6,6 +6,7 @@ import tqdm
 from erpnext.setup.utils import get_root_of
 from frappe.desk.page.setup_wizard.setup_wizard import setup_complete
 from frappe.model.document import bulk_insert
+from frappe.permissions import AUTOMATIC_ROLES
 from frappe.utils import now_datetime
 
 COMPANY_NAME = "The Company"
@@ -22,9 +23,17 @@ class Setup:
 	users_per_warehouse: int = 10
 	customers_per_warehosue: int = 30_000
 
+	def __post_init__(self):
+		frappe.flags.in_import = 1
+
 	def setup_all(self):
 		self.setup_company()
 		self.setup_items()
+		self.setup_warehouses()
+		self.setup_customers()
+		self.setup_users()
+		frappe.db.commit()
+		frappe.cache.flushall()
 
 	def setup_company(self):
 		if frappe.db.exists("Company", COMPANY_NAME):
@@ -61,7 +70,6 @@ class Setup:
 		frappe.db.set_single_value("Stock Settings", "auto_insert_price_list_rate_if_missing", 0)
 
 		frappe.db.commit()
-		frappe.clear_cache()
 
 	def setup_items(self):
 		name = name_generator(ITEM_NAME, 6)
@@ -82,16 +90,15 @@ class Setup:
 
 	def setup_warehouses(self):
 		name = name_generator(WAREHOUSE_NAME, 4)
-		template = frappe.new_doc(
-			"Warehouse",
-			parent_warehouse=get_root_of("Warehouse"),
-			company=COMPANY_NAME,
-		)
 
+		parent_warehouse = get_root_of("Warehouse")
 		for _ in tqdm.tqdm(range(self.n_warehouses)):
-			warehouse = deepcopy(template)
+			warehouse = frappe.new_doc("Warehouse")
+			warehouse.parent_warehouse = parent_warehouse
+			warehouse.company = COMPANY_NAME
 			warehouse.warehouse_name = warehouse.name = next(name)
 			warehouse.insert()
+		frappe.db.commit()
 
 	def setup_customers(self):
 		name = name_generator(CUSTOMER_NAME, 6)
@@ -112,6 +119,19 @@ class Setup:
 				yield customer
 
 		bulk_insert("Customer", customer_generator(), chunk_size=1000, commit_chunks=True)
+
+	def setup_users(self):
+		name = name_generator(USER_NAME, 4)
+
+		all_roles = set(frappe.get_all("Role", pluck="name"))
+		for _ in tqdm.tqdm(range(self.n_warehouses * self.users_per_warehouse)):
+			user = frappe.new_doc("User")
+			user.email = user.first_name = user.new_password = next(name)
+			user.send_welcome_email = False
+			user.flags.ignore_password_policy = True
+			for role in all_roles - set(AUTOMATIC_ROLES):
+				user.append("roles", {"role": role})
+			user.insert()
 
 
 def name_generator(series: str, digits):
