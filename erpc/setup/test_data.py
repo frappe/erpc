@@ -5,6 +5,7 @@ import frappe
 import tqdm
 from erpnext.setup.utils import get_root_of
 from frappe.desk.page.setup_wizard.setup_wizard import setup_complete
+from frappe.model.document import bulk_insert
 from frappe.utils import now_datetime
 
 COMPANY_NAME = "The Company"
@@ -91,18 +92,23 @@ class Setup:
 
 	def setup_customers(self):
 		name = name_generator(CUSTOMER_NAME, 6)
-		template = frappe.new_doc("Customer", customer_group=get_root_of("Customer Group"))
+		template = (
+			frappe.new_doc(
+				"Customer",
+				customer_group=get_root_of("Customer Group"),
+				customer_name=next(name),
+			)
+			.insert()
+			.reload()
+		)
 
-		frappe.flags.in_import = True
-		for i in tqdm.tqdm(range(self.n_warehouses * self.customers_per_warehosue)):
-			customer = deepcopy(template)
-			customer.customer_name = next(name)
-			customer.insert()
-			if i % 1000 == 0:
-				frappe.db.commit()
+		def customer_generator():
+			for _ in tqdm.tqdm(range(self.n_warehouses * self.customers_per_warehosue)):
+				customer = deepcopy(template)
+				customer.name = customer.customer_name = next(name)
+				yield customer
 
-		frappe.flags.in_import = False
-		frappe.db.commit()
+		bulk_insert("Customer", customer_generator(), chunk_size=5000, commit_chunks=True)
 
 
 def name_generator(series: str, digits):
