@@ -66,16 +66,19 @@ class Setup:
 	def setup_items(self):
 		name = name_generator(ITEM_NAME, 6)
 		template = frappe.new_doc("Item", is_stock_item=True, item_group=get_root_of("Item Group"))
+		template.item_code = next(name)
+		template.insert().reload()
+		# Erase unnecessary defaults
+		template.item_defaults = []
+		template.uoms = []
 
-		frappe.flags.in_import = True
-		for i in tqdm.tqdm(range(self.n_items)):
-			item = deepcopy(template)
-			item.item_code = item.name = next(name)
-			item.insert()
-			if i % 1000 == 0:
-				frappe.db.commit()
-		frappe.flags.in_import = False
-		frappe.db.commit()
+		def item_generator():
+			for _ in tqdm.tqdm(range(self.n_items - 1)):
+				item = deepcopy(template)
+				item.name = item.item_code = next(name)
+				yield item
+
+		bulk_insert("Item", item_generator(), chunk_size=1000, commit_chunks=True)
 
 	def setup_warehouses(self):
 		name = name_generator(WAREHOUSE_NAME, 4)
@@ -103,12 +106,12 @@ class Setup:
 		)
 
 		def customer_generator():
-			for _ in tqdm.tqdm(range(self.n_warehouses * self.customers_per_warehosue)):
+			for _ in tqdm.tqdm(range(self.n_warehouses * self.customers_per_warehosue - 1)):
 				customer = deepcopy(template)
 				customer.name = customer.customer_name = next(name)
 				yield customer
 
-		bulk_insert("Customer", customer_generator(), chunk_size=5000, commit_chunks=True)
+		bulk_insert("Customer", customer_generator(), chunk_size=1000, commit_chunks=True)
 
 
 def name_generator(series: str, digits):
