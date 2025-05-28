@@ -141,3 +141,31 @@ export function sales_invoice_create(baseUrl, config) {
 
 	return invoice;
 }
+
+export function sales_invoice_submit(baseUrl, config, doc) {
+	let invoice;
+
+	group("Submit a Sales Invoice", function () {
+		let submit_si = http.post(
+			`${baseUrl}/api/method/frappe.desk.form.save.savedocs`,
+			JSON.stringify({ doc: JSON.stringify(doc), action: "Submit" }),
+			params
+		);
+		check(submit_si, { "submit_si - 200 status": (r) => r.status === 200 });
+		if (submit_si.status != 200) {
+			throw new Error("Failed to submit sales invoice");
+		}
+		invoice = JSON.parse(submit_si.body)["docs"][0];
+		let fetch_si = http.post(
+			`${baseUrl}/api/method/frappe.desk.form.load.getdoc`,
+			JSON.stringify({ doctype: "Sales Invoice", name: invoice.name }),
+			params
+		);
+		check(fetch_si, {
+			"fetch_si - 200 status and submitted": (r) =>
+				r.status === 200 && invoice.docstatus == 1,
+		});
+	});
+
+	return invoice;
+}
