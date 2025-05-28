@@ -1,6 +1,6 @@
 import http from "k6/http";
 import { check, sleep } from "k6";
-import { sales_invoice_list } from "./sales_invoice.js";
+import { sales_invoice_create, sales_invoice_list } from "./sales_invoice.js";
 
 const BASE_URL = "http://erpc.localhost:8000";
 const NUM_ITEMS = 10000;
@@ -38,7 +38,7 @@ export function setup() {
 	const customers = Array.from(Array(NUM_CUSTOMERS).keys()).map(
 		(i) => `C-${String(i + 1).padStart(6, "0")}`
 	);
-	return { sids, items, warehouses, customers };
+	return { sids, items, warehouses, customers, company: COMPANY };
 }
 
 export default function (data) {
@@ -58,4 +58,5 @@ export default function (data) {
 	// NOTE: I am assuming API style use case here.
 	// For manual entries the think time should be 10-60 seconds at least.
 	sleep(1);
+	let invoice_id = sales_invoice_create(BASE_URL, data);
 }

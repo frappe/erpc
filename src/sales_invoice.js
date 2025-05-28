@@ -1,5 +1,6 @@
 import http from "k6/http";
 import { group, sleep, check } from "k6";
+import { getRandomInt } from "../utils.js";
 
 const params = { headers: { "Content-Type": "application/json" } };
 
@@ -71,4 +72,72 @@ export function sales_invoice_list(baseUrl) {
 		);
 		check(count_docs, { "count - 200 status": (r) => r.status === 200 });
 	});
+}
+
+export function sales_invoice_create(baseUrl, config) {
+	let invoice;
+	let warehouse = config.warehouses[(__VU - 1) % config.warehouses.length];
+	group("Create a new Sales Invoice", function () {
+		let tomorow = new Date(new Date().getTime() + 2 * 24 * 60 * 60 * 1000);
+		let tomorow_str = `${tomorow.getFullYear()}-${
+			tomorow.getMonth() + 1
+		}-${tomorow.getDate()}`;
+		let tmp_name = `"new-sales-invoice-${getRandomInt(0, 10000000)}`;
+		let doc = {
+			__islocal: 1,
+			__unsaved: 1,
+			company: config.company,
+			customer: config.customers[getRandomInt(0, config.customers.length)],
+			due_date: tomorow_str,
+			naming_series: "ACC-SINV-.YYYY.-", // default
+			name: tmp_name,
+			status: "Draft",
+			debit_to: "Debtors - TC",
+			docstatus: 0,
+			doctype: "Sales Invoice",
+			items: [],
+		};
+
+		for (let i = 0; i < 3; i++) {
+			doc.items.push({
+				__islocal: 1,
+				__unsaved: 1,
+				docstatus: 0,
+				doctype: "Sales Invoice Item",
+				idx: i + 1,
+				name: `new-sales-invoice-item-${getRandomInt(0, 100000000)}`,
+				parent: tmp_name,
+				parentfield: "items",
+				parenttype: "Sales Invoice",
+				item_code: config.items[getRandomInt(0, config.items.length)],
+				qty: 1,
+				rate: i + 1,
+				uom: "Nos",
+				warehouse: warehouse,
+				expense_account: "Cost of Goods Sold - TC",
+				cost_center: "Main - TC",
+				income_account: "Sales - TC",
+			});
+		}
+
+		let create_si = http.post(
+			`${baseUrl}/api/method/frappe.desk.form.save.savedocs`,
+			JSON.stringify({ doc: JSON.stringify(doc), action: "Save" }),
+			params
+		);
+		check(create_si, { "create_si - 200 status": (r) => r.status === 200 });
+		if (create_si.status != 200) {
+			throw new Error("Failed to create sales invoice");
+		}
+
+		invoice = JSON.parse(create_si.body)["docs"][0];
+		let fetch_si = http.post(
+			`${baseUrl}/api/method/frappe.desk.form.load.getdoc`,
+			JSON.stringify({ doctype: "Sales Invoice", name: invoice.name }),
+			params
+		);
+		check(fetch_si, { "fetch_si - 200 status": (r) => r.status === 200 });
+	});
+
+	return invoice;
 }
