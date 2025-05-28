@@ -22,7 +22,7 @@ class Setup:
 	n_warehouses: int = 10  # Note: This is only real "scaling factor" that should be used.
 	users_per_warehouse: int = 10
 	# TPC-C says 30,000, but this number is meaningless from ERPNExt POV
-	customers_per_warehosue: int = 3000
+	customers_per_warehouse: int = 3000
 
 	def __post_init__(self):
 		frappe.flags.in_import = 1
@@ -114,7 +114,7 @@ class Setup:
 		)
 
 		def customer_generator():
-			for _ in tqdm.tqdm(range(self.n_warehouses * self.customers_per_warehosue - 1)):
+			for _ in tqdm.tqdm(range(self.n_warehouses * self.customers_per_warehouse - 1)):
 				customer = deepcopy(template)
 				customer.name = customer.customer_name = next(name)
 				yield customer
