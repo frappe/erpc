@@ -93,7 +93,8 @@ jobs:
           bench new-site --db-root-password root --admin-password admin test_site
           bench --site test_site install-app erpnext
           bench --site test_site install-app erpc
-          bench --site test_site setup-loadtest-data
+          bench --site test_site setup-loadtest-data --n-items 10 --users-per-warehouse 1 --customers-per-warehouse 1
+          bench use test_site
         env:
           CI: "Yes"
 
@@ -104,4 +105,4 @@ jobs:
           path: "./src/script.js"
           flags: "--throw --vus 1"
         env:
-          BASE_URL: "http://test_site:8000"
+          BASE_URL: "http://127.0.0.1:8000"

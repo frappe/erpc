@@ -145,7 +145,8 @@ class Setup:
 		batches = list(itertools.batched(itertools.product(items, warehouses), 100))
 		for batch in tqdm.tqdm(batches):
 			sr: StockReconciliation = frappe.new_doc("Stock Reconciliation")
-			sr.purpose = "Stock Reconciliation"
+			sr.purpose = "Opening Stock"
+			sr.expense_account = "Temporary Opening - TC"
 			for item, warehouse in batch:
 				sr.append(
 					"items",
