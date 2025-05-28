@@ -126,6 +126,7 @@ class Setup:
 
 	def setup_users(self):
 		name = name_generator(USER_NAME, 4)
+		frappe.flags.in_import = 1
 
 		all_roles = set(frappe.get_all("Role", pluck="name"))
 		for _ in tqdm.tqdm(range(self.n_warehouses * self.users_per_warehouse)):
