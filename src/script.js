@@ -6,9 +6,9 @@ import {
 	sales_invoice_list,
 	sales_invoice_payment,
 	sales_invoice_submit,
+	request,
 } from "./requests.js";
 
-const BASE_URL = "http://erpc.localhost:8000";
 const NUM_ITEMS = 1000;
 const NUM_WAREHOUSES = 10;
 const NUM_CUSTOMERS = 3000 * NUM_WAREHOUSES;
@@ -28,7 +28,7 @@ export function setup() {
 		.map((i) => `u-${String(i + 1).padStart(4, "0")}@erpc.local`)
 		.reverse() // faster detection of failure for provisioned user
 		.forEach((username) => {
-			let res = http.post(`${BASE_URL}/api/method/login`, { usr: username, pwd: username });
+			let res = request("/api/method/login", { usr: username, pwd: username });
 			if (res.status != 200) {
 				throw new Error(`User login failed for ${username}`);
 			}
@@ -45,7 +45,14 @@ export function setup() {
 	const customers = Array.from(Array(NUM_CUSTOMERS).keys()).map(
 		(i) => `C-${String(i + 1).padStart(6, "0")}`
 	);
-	return { sids, items, warehouses, customers, company: COMPANY };
+
+	return {
+		sids,
+		items,
+		warehouses,
+		customers,
+		company: COMPANY,
+	};
 }
 
 export default function (data) {
@@ -53,22 +60,22 @@ export default function (data) {
 		console.error("SIDs not available. VU cannot proceed.");
 	}
 	const jar = http.cookieJar();
-	jar.set(BASE_URL, "sid", data.sids[__VU - 1]);
+	jar.set(__ENV.BASE_URL, "sid", data.sids[__VU - 1]);
 
-	let pong = http.get(`${BASE_URL}/api/method/ping`);
+	let pong = http.get(`${__ENV.BASE_URL}/api/method/ping`);
 	check(pong, {
 		ping: (r) => r.status === 200 && r.cookies.sid?.[0]?.value == data.sids[__VU - 1],
 	});
 	sleep(0.1);
-	sales_invoice_list(BASE_URL);
+	sales_invoice_list();
 	// NOTE: I am assuming API style use case here.
 	// For manual entries the think time should be 10-60 seconds at least.
 	sleep(1);
-	let invoice = sales_invoice_create(BASE_URL, data);
+	let invoice = sales_invoice_create(data);
 	sleep(1);
-	invoice = sales_invoice_submit(BASE_URL, data, invoice);
+	invoice = sales_invoice_submit(data, invoice);
 	sleep(1);
-	invoice = sales_invoice_payment(BASE_URL, data, invoice);
+	invoice = sales_invoice_payment(data, invoice);
 	sleep(2);
-	invoice = deliver_items(BASE_URL, data, invoice);
+	invoice = deliver_items(data, invoice);
 }
