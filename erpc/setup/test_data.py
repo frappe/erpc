@@ -126,6 +126,7 @@ class Setup:
 
 	def setup_users(self):
 		name = name_generator(USER_NAME, 4)
+		frappe.flags.in_import = 1
 
 		all_roles = set(frappe.get_all("Role", pluck="name"))
 		for _ in tqdm.tqdm(range(self.n_warehouses * self.users_per_warehouse)):
@@ -145,7 +146,8 @@ class Setup:
 		batches = list(itertools.batched(itertools.product(items, warehouses), 100))
 		for batch in tqdm.tqdm(batches):
 			sr: StockReconciliation = frappe.new_doc("Stock Reconciliation")
-			sr.purpose = "Stock Reconciliation"
+			sr.purpose = "Opening Stock"
+			sr.expense_account = "Temporary Opening - TC"
 			for item, warehouse in batch:
 				sr.append(
 					"items",
