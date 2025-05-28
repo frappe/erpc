@@ -1,9 +1,11 @@
+import itertools
 from copy import deepcopy
 from dataclasses import dataclass
 
 import frappe
 import tqdm
 from erpnext.setup.utils import get_root_of
+from erpnext.stock.doctype.stock_reconciliation.stock_reconciliation import StockReconciliation
 from frappe.desk.page.setup_wizard.setup_wizard import setup_complete
 from frappe.model.document import bulk_insert
 from frappe.permissions import AUTOMATIC_ROLES
@@ -18,7 +20,7 @@ USER_NAME = "u-{}@erpc.local"
 
 @dataclass
 class Setup:
-	n_items: int = 10_000  # TPC-C says 100k, but smaller number will trigger contention faster
+	n_items: int = 1000  # TPC-C says 100k, but smaller number will trigger contention faster
 	n_warehouses: int = 10  # Note: This is only real "scaling factor" that should be used.
 	users_per_warehouse: int = 10
 	# TPC-C says 30,000, but this number is meaningless from ERPNExt POV
@@ -33,6 +35,7 @@ class Setup:
 		self.setup_warehouses()
 		self.setup_customers()
 		self.setup_users()
+		self.setup_opening_stock()
 		frappe.db.commit()
 		frappe.cache.flushall()
 
@@ -133,6 +136,29 @@ class Setup:
 			for role in all_roles - set(AUTOMATIC_ROLES):
 				user.append("roles", {"role": role})
 			user.insert()
+
+	def setup_opening_stock(self):
+		items = frappe.get_all(
+			"Item", {"name": ("like", "I-%")}, pluck="name", order_by="name", limit=self.n_items
+		)
+		warehouses = frappe.get_all("Warehouse", {"name": ("like", "WH-%")}, pluck="name")
+		batches = list(itertools.batched(itertools.product(items, warehouses), 100))
+		for batch in tqdm.tqdm(batches):
+			sr: StockReconciliation = frappe.new_doc("Stock Reconciliation")
+			sr.purpose = "Stock Reconciliation"
+			for item, warehouse in batch:
+				sr.append(
+					"items",
+					{
+						"item_code": item,
+						"warehouse": warehouse,
+						"qty": 10_000,
+						"valuation_rate": 1.0,
+					},
+				)
+			sr.insert()
+			sr.submit()
+			frappe.db.commit()
 
 
 def name_generator(series: str, digits):

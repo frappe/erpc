@@ -8,7 +8,7 @@ import {
 } from "./sales_invoice.js";
 
 const BASE_URL = "http://erpc.localhost:8000";
-const NUM_ITEMS = 10000;
+const NUM_ITEMS = 1000;
 const NUM_WAREHOUSES = 10;
 const NUM_CUSTOMERS = 3000 * NUM_WAREHOUSES;
 const NUM_USERS = 10 * NUM_WAREHOUSES;
