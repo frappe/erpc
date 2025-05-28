@@ -5,7 +5,7 @@ import {
 	sales_invoice_list,
 	sales_invoice_payment,
 	sales_invoice_submit,
-} from "./sales_invoice.js";
+} from "./requests.js";
 
 const BASE_URL = "http://erpc.localhost:8000";
 const NUM_ITEMS = 1000;
