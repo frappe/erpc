@@ -67,4 +67,5 @@ export default function (data) {
 	invoice = sales_invoice_submit(BASE_URL, data, invoice);
 	sleep(1);
 	sales_invoice_payment(BASE_URL, data, invoice);
+	sleep(1);
 }

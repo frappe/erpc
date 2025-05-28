@@ -4,6 +4,21 @@ import { getRandomInt } from "../utils.js";
 
 const params = { headers: { "Content-Type": "application/json" } };
 
+function get_doc(baseUrl, doctype, name) {
+	let fetch_doc = http.post(
+		`${baseUrl}/api/method/frappe.desk.form.load.getdoc`,
+		JSON.stringify({ doctype, name }),
+		params
+	);
+	let tests = {};
+	tests[`fetch_${doctype.replace(" ", "_").toLowerCase()}`] = (r) => r.status == 200;
+	check(fetch_doc, tests);
+
+	if (fetch_doc.status == 200) {
+		return JSON.parse(fetch_doc.body)?.docs?.[0];
+	}
+}
+
 export function sales_invoice_list(baseUrl) {
 	group("Load Sales Invoice List", function () {
 		// This is copied from network tab for realistic file and args.
@@ -131,12 +146,7 @@ export function sales_invoice_create(baseUrl, config) {
 		}
 
 		invoice = JSON.parse(create_si.body)["docs"][0];
-		let fetch_si = http.post(
-			`${baseUrl}/api/method/frappe.desk.form.load.getdoc`,
-			JSON.stringify({ doctype: "Sales Invoice", name: invoice.name }),
-			params
-		);
-		check(fetch_si, { fetch_draft_sales_invoice: (r) => r.status === 200 });
+		get_doc(baseUrl, "Sales Invoice", invoice.name);
 	});
 
 	return invoice;
@@ -156,14 +166,8 @@ export function sales_invoice_submit(baseUrl, config, doc) {
 			throw new Error("Failed to submit sales invoice");
 		}
 		invoice = JSON.parse(submit_si.body)["docs"][0];
-		let fetch_si = http.post(
-			`${baseUrl}/api/method/frappe.desk.form.load.getdoc`,
-			JSON.stringify({ doctype: "Sales Invoice", name: invoice.name }),
-			params
-		);
-		check(fetch_si, {
-			fetch_submitted_sales_invoice: (r) => r.status === 200 && invoice.docstatus == 1,
-		});
+		invoice = get_doc(baseUrl, "Sales Invoice", invoice.name);
+		check(invoice, { document_is_submitted: (doc) => doc.docstatus == 1 });
 	});
 
 	return invoice;
@@ -201,5 +205,9 @@ export function sales_invoice_payment(baseUrl, config, invoice) {
 			params
 		);
 		check(submit_payment, { submit_payment: (r) => r.status === 200 });
+
+		sleep(0.5);
+		let doc = get_doc(baseUrl, invoice.doctype, invoice.name);
+		check(doc, { order_status_paid: (doc) => doc.status === "Paid" });
 	});
 }
