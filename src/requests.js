@@ -207,7 +207,45 @@ export function sales_invoice_payment(baseUrl, config, invoice) {
 		check(submit_payment, { submit_payment: (r) => r.status === 200 });
 
 		sleep(0.5);
-		let doc = get_doc(baseUrl, invoice.doctype, invoice.name);
-		check(doc, { order_status_paid: (doc) => doc.status === "Paid" });
+		invoice = get_doc(baseUrl, invoice.doctype, invoice.name);
+		check(invoice, { order_status_paid: (doc) => doc.status === "Paid" });
+	});
+	return invoice;
+}
+
+export function deliver_items(baseUrl, config, invoice) {
+	group("Create delivery for Sales Invoice", function () {
+		let generate_delivery = http.post(
+			`${baseUrl}/api/method/frappe.model.mapper.make_mapped_doc`,
+			JSON.stringify({
+				method: "erpnext.accounts.doctype.sales_invoice.sales_invoice.make_delivery_note",
+				source_name: invoice.name,
+			}),
+			params
+		);
+		check(generate_delivery, { generate_delivery: (r) => r.status === 200 });
+		let delivery = JSON.parse(generate_delivery.body).message;
+		delivery.__islocal = 1;
+		delivery.name = `new-delivery-note-${getRandomInt(0, 1000000)}`;
+
+		sleep(0.5);
+		let save_delivery = http.post(
+			`${baseUrl}/api/method/frappe.desk.form.save.savedocs`,
+			JSON.stringify({ doc: JSON.stringify(delivery), action: "Save" }),
+			params
+		);
+		check(save_delivery, { save_delivery: (r) => r.status === 200 });
+		delivery = JSON.parse(save_delivery.body).docs[0];
+
+		sleep(0.5);
+		let submit_delivery = http.post(
+			`${baseUrl}/api/method/frappe.desk.form.save.savedocs`,
+			JSON.stringify({ doc: JSON.stringify(delivery), action: "Submit" }),
+			params
+		);
+		check(submit_delivery, { submit_delivery: (r) => r.status === 200 });
+
+		sleep(0.5);
+		invoice = get_doc(baseUrl, invoice.doctype, invoice.name); // check delivery status
 	});
 }

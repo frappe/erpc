@@ -1,6 +1,7 @@
 import http from "k6/http";
 import { check, sleep } from "k6";
 import {
+	deliver_items,
 	sales_invoice_create,
 	sales_invoice_list,
 	sales_invoice_payment,
@@ -66,6 +67,7 @@ export default function (data) {
 	sleep(1);
 	invoice = sales_invoice_submit(BASE_URL, data, invoice);
 	sleep(1);
-	sales_invoice_payment(BASE_URL, data, invoice);
-	sleep(1);
+	invoice = sales_invoice_payment(BASE_URL, data, invoice);
+	sleep(2);
+	invoice = deliver_items(BASE_URL, data, invoice);
 }
