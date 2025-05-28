@@ -3,6 +3,7 @@ import { check, sleep } from "k6";
 import {
 	sales_invoice_create,
 	sales_invoice_list,
+	sales_invoice_payment,
 	sales_invoice_submit,
 } from "./sales_invoice.js";
 
@@ -54,8 +55,7 @@ export default function (data) {
 
 	let pong = http.get(`${BASE_URL}/api/method/ping`);
 	check(pong, {
-		"ping - 200 status": (r) => r.status === 200,
-		"ping - correct cookies": (r) => r.cookies.sid?.[0]?.value == data.sids[__VU - 1],
+		ping: (r) => r.status === 200 && r.cookies.sid?.[0]?.value == data.sids[__VU - 1],
 	});
 	sleep(0.1);
 	sales_invoice_list(BASE_URL);
@@ -65,4 +65,6 @@ export default function (data) {
 	let invoice = sales_invoice_create(BASE_URL, data);
 	sleep(1);
 	invoice = sales_invoice_submit(BASE_URL, data, invoice);
+	sleep(1);
+	sales_invoice_payment(BASE_URL, data, invoice);
 }

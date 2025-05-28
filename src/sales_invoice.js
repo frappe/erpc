@@ -57,7 +57,7 @@ export function sales_invoice_list(baseUrl) {
 			JSON.stringify(list_args),
 			params
 		);
-		check(list_docs, { "list - 200 status": (r) => r.status === 200 });
+		check(list_docs, { list_sales_invoice: (r) => r.status === 200 });
 		let count_args = {
 			doctype: "Sales Invoice",
 			filters: [],
@@ -70,7 +70,7 @@ export function sales_invoice_list(baseUrl) {
 			JSON.stringify(count_args),
 			params
 		);
-		check(count_docs, { "count - 200 status": (r) => r.status === 200 });
+		check(count_docs, { count_sales_invoice: (r) => r.status === 200 });
 	});
 }
 
@@ -125,7 +125,7 @@ export function sales_invoice_create(baseUrl, config) {
 			JSON.stringify({ doc: JSON.stringify(doc), action: "Save" }),
 			params
 		);
-		check(create_si, { "create_si - 200 status": (r) => r.status === 200 });
+		check(create_si, { create_sales_invoice: (r) => r.status === 200 });
 		if (create_si.status != 200) {
 			throw new Error("Failed to create sales invoice");
 		}
@@ -136,7 +136,7 @@ export function sales_invoice_create(baseUrl, config) {
 			JSON.stringify({ doctype: "Sales Invoice", name: invoice.name }),
 			params
 		);
-		check(fetch_si, { "fetch_si - 200 status": (r) => r.status === 200 });
+		check(fetch_si, { fetch_draft_sales_invoice: (r) => r.status === 200 });
 	});
 
 	return invoice;
@@ -151,7 +151,7 @@ export function sales_invoice_submit(baseUrl, config, doc) {
 			JSON.stringify({ doc: JSON.stringify(doc), action: "Submit" }),
 			params
 		);
-		check(submit_si, { "submit_si - 200 status": (r) => r.status === 200 });
+		check(submit_si, { submit_sales_invoice: (r) => r.status === 200 });
 		if (submit_si.status != 200) {
 			throw new Error("Failed to submit sales invoice");
 		}
@@ -162,10 +162,44 @@ export function sales_invoice_submit(baseUrl, config, doc) {
 			params
 		);
 		check(fetch_si, {
-			"fetch_si - 200 status and submitted": (r) =>
-				r.status === 200 && invoice.docstatus == 1,
+			fetch_submitted_sales_invoice: (r) => r.status === 200 && invoice.docstatus == 1,
 		});
 	});
 
 	return invoice;
+}
+
+export function sales_invoice_payment(baseUrl, config, invoice) {
+	group("Create payment for Sales Invoice", function () {
+		let generate_payment = http.post(
+			`${baseUrl}/api/method/erpnext.accounts.doctype.payment_entry.payment_entry.get_payment_entry`,
+			JSON.stringify({
+				dt: invoice.doctype,
+				dn: invoice.name,
+				bank_account: "Cash - TC",
+			}),
+			params
+		);
+		check(generate_payment, { generate_payment: (r) => r.status === 200 });
+		let payment = JSON.parse(generate_payment.body).message;
+		payment.__islocal = 1;
+		payment.name = `new-payment-entry-${getRandomInt(0, 1000000)}`;
+
+		sleep(0.5);
+		let save_payment = http.post(
+			`${baseUrl}/api/method/frappe.desk.form.save.savedocs`,
+			JSON.stringify({ doc: JSON.stringify(payment), action: "Save" }),
+			params
+		);
+		check(save_payment, { save_payment: (r) => r.status === 200 });
+		payment = JSON.parse(save_payment.body).docs[0];
+
+		sleep(0.5);
+		let submit_payment = http.post(
+			`${baseUrl}/api/method/frappe.desk.form.save.savedocs`,
+			JSON.stringify({ doc: JSON.stringify(payment), action: "Submit" }),
+			params
+		);
+		check(submit_payment, { submit_payment: (r) => r.status === 200 });
+	});
 }
