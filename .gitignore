@@ -35,6 +35,8 @@ venv.bak/
 # Dependency directories
 node_modules/
 jspm_packages/
+**/node_modules
+
 
 # IDEs and editors
 .vscode/

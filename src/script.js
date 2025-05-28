@@ -1,5 +1,6 @@
 import http from "k6/http";
 import { check, sleep } from "k6";
+import { sales_invoice_list } from "./sales_invoice.js";
 
 const BASE_URL = "http://erpc.localhost:8000";
 const NUM_ITEMS = 10000;
@@ -21,7 +22,7 @@ export function setup() {
 		.map((i) => `u-${String(i + 1).padStart(4, "0")}@erpc.local`) // TODO: provide list?
 		.forEach((username) => {
 			let res = http.post(`${BASE_URL}/api/method/login`, { usr: username, pwd: username });
-			if (r.status != 200) {
+			if (res.status != 200) {
 				throw new Error(`User login failed for ${username}`);
 			}
 			sids.push(res.cookies.sid[0].value);
@@ -41,15 +42,20 @@ export function setup() {
 }
 
 export default function (data) {
-	if (data.sids.length != NUM_USERS) {
+	if (data.sids.length != options.vus) {
 		console.error("SIDs not available. VU cannot proceed.");
 	}
 	const jar = http.cookieJar();
 	jar.set(BASE_URL, "sid", data.sids[__VU - 1]);
 
-	let res = http.get(`${BASE_URL}/api/method/ping`);
-	check(res, {
-		"status is 200": (r) => r.status === 200,
-		"Same cookie is sent back": (r) => r.cookies.sid?.[0]?.value == data.sids[__VU - 1],
+	let pong = http.get(`${BASE_URL}/api/method/ping`);
+	check(pong, {
+		"ping - 200 status": (r) => r.status === 200,
+		"ping - correct cookies": (r) => r.cookies.sid?.[0]?.value == data.sids[__VU - 1],
 	});
+	sleep(0.1);
+	sales_invoice_list(BASE_URL);
+	// NOTE: I am assuming API style use case here.
+	// For manual entries the think time should be 10-60 seconds at least.
+	sleep(1);
 }
