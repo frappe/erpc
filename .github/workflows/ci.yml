@@ -77,6 +77,14 @@ jobs:
           sudo apt update
           sudo apt-get install mariadb-client
 
+      - name: Install K6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+
       - name: Setup
         run: |
           pip install frappe-bench
@@ -84,7 +92,7 @@ jobs:
           mariadb --host 127.0.0.1 --port 3306 -u root -proot -e "SET GLOBAL character_set_server = 'utf8mb4'"
           mariadb --host 127.0.0.1 --port 3306 -u root -proot -e "SET GLOBAL collation_server = 'utf8mb4_unicode_ci'"
 
-      - name: Install
+      - name: Install Site
         working-directory: /home/runner/frappe-bench
         run: |
           bench get-app erpnext
@@ -93,16 +101,25 @@ jobs:
           bench new-site --db-root-password root --admin-password admin test_site
           bench --site test_site install-app erpnext
           bench --site test_site install-app erpc
-          bench --site test_site setup-loadtest-data --n-items 10 --users-per-warehouse 1 --customers-per-warehouse 1
-          bench use test_site
         env:
           CI: "Yes"
 
-      - uses: grafana/setup-k6-action@v1
 
-      - uses: grafana/run-k6-action@v1
-        with:
-          path: "./src/script.js"
-          flags: "--throw --vus 1"
-        env:
-          BASE_URL: "http://127.0.0.1:8000"
+      - name: Run K6
+        working-directory: /home/runner/frappe-bench
+        run: |
+          bench use test_site
+          bench start &>> bench_start.log &
+          bench --site test_site setup-loadtest-data --n-items 10 --users-per-warehouse 1 --customers-per-warehouse 1
+          k6 run --vus 1 --throw -e BASE_URL=http://127.0.0.1:8000 ./apps/erpc/src/script.js
+
+      - name: Show bench output
+        working-directory: /home/runner/frappe-bench
+        if: ${{ always() }}
+        run: |
+          cat bench_start.log || true
+          cd logs
+          for f in ./*.log*; do
+            echo "Printing log: $f";
+            cat $f
+          done
