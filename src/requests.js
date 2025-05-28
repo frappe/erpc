@@ -1,8 +1,21 @@
 import http from "k6/http";
 import { group, sleep, check } from "k6";
+import { Trend } from "k6/metrics";
 import { getRandomInt } from "../utils.js";
 
 const params = { headers: { "Content-Type": "application/json" } };
+
+const get_doc_trend = new Trend("get_doc");
+const load_list_trend = new Trend("load_list");
+const count_list_trend = new Trend("count_list");
+const create_si_trend = new Trend("save_si");
+const submit_si_trend = new Trend("submit_si");
+const make_payment_trend = new Trend("make_payment");
+const create_payment_trend = new Trend("save_payment");
+const submit_payment_trend = new Trend("submit_payment");
+const make_delivery_trend = new Trend("make_delivery");
+const save_delivery_trend = new Trend("save_delivery");
+const submit_delivery_trend = new Trend("submit_delivery");
 
 function get_doc(baseUrl, doctype, name) {
 	let fetch_doc = http.post(
@@ -10,6 +23,7 @@ function get_doc(baseUrl, doctype, name) {
 		JSON.stringify({ doctype, name }),
 		params
 	);
+	get_doc_trend.add(fetch_doc.timings.waiting);
 	let tests = {};
 	tests[`fetch_${doctype.replace(" ", "_").toLowerCase()}`] = (r) => r.status == 200;
 	check(fetch_doc, tests);
@@ -73,6 +87,7 @@ export function sales_invoice_list(baseUrl) {
 			params
 		);
 		check(list_docs, { list_sales_invoice: (r) => r.status === 200 });
+		load_list_trend.add(list_docs.timings.waiting);
 		let count_args = {
 			doctype: "Sales Invoice",
 			filters: [],
@@ -86,6 +101,7 @@ export function sales_invoice_list(baseUrl) {
 			params
 		);
 		check(count_docs, { count_sales_invoice: (r) => r.status === 200 });
+		count_list_trend.add(count_docs.timings.waiting);
 	});
 }
 
@@ -145,6 +161,7 @@ export function sales_invoice_create(baseUrl, config) {
 			throw new Error("Failed to create sales invoice");
 		}
 
+		create_si_trend.add(create_si.timings.waiting);
 		invoice = JSON.parse(create_si.body)["docs"][0];
 		get_doc(baseUrl, "Sales Invoice", invoice.name);
 	});
@@ -165,6 +182,7 @@ export function sales_invoice_submit(baseUrl, config, doc) {
 		if (submit_si.status != 200) {
 			throw new Error("Failed to submit sales invoice");
 		}
+		submit_si_trend.add(submit_si.timings.waiting);
 		invoice = JSON.parse(submit_si.body)["docs"][0];
 		invoice = get_doc(baseUrl, "Sales Invoice", invoice.name);
 		check(invoice, { document_is_submitted: (doc) => doc.docstatus == 1 });
@@ -175,7 +193,7 @@ export function sales_invoice_submit(baseUrl, config, doc) {
 
 export function sales_invoice_payment(baseUrl, config, invoice) {
 	group("Create payment for Sales Invoice", function () {
-		let generate_payment = http.post(
+		let make_payment = http.post(
 			`${baseUrl}/api/method/erpnext.accounts.doctype.payment_entry.payment_entry.get_payment_entry`,
 			JSON.stringify({
 				dt: invoice.doctype,
@@ -184,8 +202,9 @@ export function sales_invoice_payment(baseUrl, config, invoice) {
 			}),
 			params
 		);
-		check(generate_payment, { generate_payment: (r) => r.status === 200 });
-		let payment = JSON.parse(generate_payment.body).message;
+		check(make_payment, { make_payment: (r) => r.status === 200 });
+		make_payment_trend.add(make_payment.timings.waiting);
+		let payment = JSON.parse(make_payment.body).message;
 		payment.__islocal = 1;
 		payment.name = `new-payment-entry-${getRandomInt(0, 1000000)}`;
 
@@ -196,6 +215,7 @@ export function sales_invoice_payment(baseUrl, config, invoice) {
 			params
 		);
 		check(save_payment, { save_payment: (r) => r.status === 200 });
+		create_payment_trend.add(save_payment.timings.waiting);
 		payment = JSON.parse(save_payment.body).docs[0];
 
 		sleep(0.5);
@@ -205,6 +225,7 @@ export function sales_invoice_payment(baseUrl, config, invoice) {
 			params
 		);
 		check(submit_payment, { submit_payment: (r) => r.status === 200 });
+		submit_payment_trend.add(submit_payment.timings.waiting);
 
 		sleep(0.5);
 		invoice = get_doc(baseUrl, invoice.doctype, invoice.name);
@@ -215,7 +236,7 @@ export function sales_invoice_payment(baseUrl, config, invoice) {
 
 export function deliver_items(baseUrl, config, invoice) {
 	group("Create delivery for Sales Invoice", function () {
-		let generate_delivery = http.post(
+		let make_delivery = http.post(
 			`${baseUrl}/api/method/frappe.model.mapper.make_mapped_doc`,
 			JSON.stringify({
 				method: "erpnext.accounts.doctype.sales_invoice.sales_invoice.make_delivery_note",
@@ -223,8 +244,9 @@ export function deliver_items(baseUrl, config, invoice) {
 			}),
 			params
 		);
-		check(generate_delivery, { generate_delivery: (r) => r.status === 200 });
-		let delivery = JSON.parse(generate_delivery.body).message;
+		check(make_delivery, { generate_delivery: (r) => r.status === 200 });
+		make_delivery_trend.add(make_delivery.timings.waiting);
+		let delivery = JSON.parse(make_delivery.body).message;
 		delivery.__islocal = 1;
 		delivery.name = `new-delivery-note-${getRandomInt(0, 1000000)}`;
 
@@ -236,6 +258,7 @@ export function deliver_items(baseUrl, config, invoice) {
 		);
 		check(save_delivery, { save_delivery: (r) => r.status === 200 });
 		delivery = JSON.parse(save_delivery.body).docs[0];
+		save_delivery_trend.add(save_delivery.timings.waiting);
 
 		sleep(0.5);
 		let submit_delivery = http.post(
@@ -244,6 +267,7 @@ export function deliver_items(baseUrl, config, invoice) {
 			params
 		);
 		check(submit_delivery, { submit_delivery: (r) => r.status === 200 });
+		submit_delivery_trend.add(submit_delivery.timings.waiting);
 
 		sleep(0.5);
 		invoice = get_doc(baseUrl, invoice.doctype, invoice.name); // check delivery status
