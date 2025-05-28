@@ -1,7 +1,6 @@
 import http from "k6/http";
 import { group, sleep, check } from "k6";
 import { Trend } from "k6/metrics";
-import { getRandomInt } from "../utils.js";
 
 const params = { headers: { "Content-Type": "application/json" } };
 
@@ -272,4 +271,8 @@ export function deliver_items(baseUrl, config, invoice) {
 		sleep(0.5);
 		invoice = get_doc(baseUrl, invoice.doctype, invoice.name); // check delivery status
 	});
+}
+
+function getRandomInt(min, max) {
+	return Math.floor(Math.random() * (max - min)) + min;
 }

@@ -25,7 +25,8 @@ export function setup() {
 
 	const sids = [];
 	Array.from(Array(options.vus).keys())
-		.map((i) => `u-${String(i + 1).padStart(4, "0")}@erpc.local`) // TODO: provide list?
+		.map((i) => `u-${String(i + 1).padStart(4, "0")}@erpc.local`)
+		.reverse() // faster detection of failure for provisioned user
 		.forEach((username) => {
 			let res = http.post(`${BASE_URL}/api/method/login`, { usr: username, pwd: username });
 			if (res.status != 200) {
