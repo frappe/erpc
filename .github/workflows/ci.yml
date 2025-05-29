@@ -1,4 +1,4 @@
-name: CI
+name: Sanity Test
 
 on:
   push:
