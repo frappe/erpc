@@ -6,7 +6,7 @@ TPC-C inspired benchmark and load testing for ERPNext
 
 ### Pre-requisites
 
-- ERPNext install with a freshly installed site.
+- New site with ERPNext installed.
 - Grafana K6 - [Installation Guide](https://grafana.com/docs/k6/latest/set-up/install-k6/)
 - Basic understanding of how Frappe, ERPNext, and K6 work.
 
@@ -27,7 +27,7 @@ We use k6 to generate load. You can read their [documentation](https://grafana.c
 ```bash
 # Setup dummy master data for load testing
 bench --site test_site setup-loadtest-data
-# Run the load test with 100 virtual concurent users
+# Run the load test with 100 virtual concurrent users
 k6 run --vus 100 --duration 10m -e BASE_URL=http://sitename:port ./apps/erpc/src/script.js
 ```
 
