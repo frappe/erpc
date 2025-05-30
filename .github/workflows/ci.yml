@@ -1,9 +1,6 @@
 name: Sanity Test
 
 on:
-  push:
-    branches:
-      - develop
   pull_request:
   schedule:
     # Run everday at midnight UTC / 5:30 IST

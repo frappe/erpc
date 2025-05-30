@@ -136,7 +136,8 @@ class Setup:
 			user.flags.ignore_password_policy = True
 			for role in all_roles - set(AUTOMATIC_ROLES):
 				user.append("roles", {"role": role})
-			user.insert()
+			if not frappe.db.exists("User", user.name):
+				user.insert()
 
 	def setup_opening_stock(self):
 		items = frappe.get_all(
