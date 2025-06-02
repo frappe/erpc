@@ -71,6 +71,7 @@ export function sales_invoice_create(config) {
 			debit_to: "Debtors - TC",
 			docstatus: 0,
 			doctype: "Sales Invoice",
+			branch: warehouse.replace("WH-", ""),
 			items: [],
 		};
 

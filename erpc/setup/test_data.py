@@ -6,6 +6,8 @@ import frappe
 import tqdm
 from erpnext.setup.utils import get_root_of
 from erpnext.stock.doctype.stock_reconciliation.stock_reconciliation import StockReconciliation
+from frappe.core.doctype.doctype.doctype import make_property_setter
+from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from frappe.desk.page.setup_wizard.setup_wizard import setup_complete
 from frappe.model.document import bulk_insert
 from frappe.permissions import AUTOMATIC_ROLES
@@ -30,6 +32,8 @@ class Setup:
 		frappe.flags.in_import = 1
 
 	def setup_all(self):
+		self.setup_custom_fields()
+		self.setup_custom_naming()
 		self.setup_company()
 		self.setup_items()
 		self.setup_warehouses()
@@ -74,6 +78,30 @@ class Setup:
 		frappe.db.set_single_value("Stock Settings", "auto_insert_price_list_rate_if_missing", 0)
 
 		frappe.db.commit()
+
+	def setup_custom_fields(self):
+		"""Add custom field on warehouses for naming."""
+		create_custom_fields(
+			{
+				("Sales Invoice", "Delivery Note", "Payment Entry"): [
+					{"fieldname": "branch", "fieldtype": "Data", "label": "Branch"}
+				],
+			}
+		)
+
+	def setup_custom_naming(self):
+		"""Setup branch specific naming to minimize contention."""
+
+		naming_series = {
+			"Sales Invoice": "INV-.branch.-######",
+			"Delivery Note": "DN-.branch.-######",
+			"Payment Entry": "PE-.branch.-######",
+		}
+
+		for doctype, series in naming_series.items():
+			make_property_setter(doctype, "naming_series", "default", "", "Text")
+			make_property_setter(doctype, "naming_series", "options", series, "Text")
+			make_property_setter(doctype, "naming_series", "default", series, "Text")
 
 	def setup_items(self):
 		name = name_generator(ITEM_NAME, 6)
