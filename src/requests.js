@@ -66,7 +66,6 @@ export function sales_invoice_create(config) {
 			company: config.company,
 			customer: config.customers[getRandomInt(0, config.customers.length)],
 			due_date: tomorow_str,
-			naming_series: "ACC-SINV-.YYYY.-", // default
 			name: tmp_name,
 			status: "Draft",
 			debit_to: "Debtors - TC",

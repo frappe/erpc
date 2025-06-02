@@ -9,10 +9,10 @@ import {
 	request,
 } from "./requests.js";
 
-const NUM_ITEMS = 1000;
-const NUM_WAREHOUSES = 10;
-const NUM_CUSTOMERS = 3000 * NUM_WAREHOUSES;
-const NUM_USERS = 10 * NUM_WAREHOUSES;
+const NUM_ITEMS = parseInt(__ENV.NUM_ITEMS) || 1000;
+const NUM_WAREHOUSES = parseInt(__ENV.NUM_WAREHOUSES) || 10;
+const NUM_CUSTOMERS = (parseInt(__ENV.CUSTOMERS_PER_WAREHOUSE) || 3000) * NUM_WAREHOUSES;
+const NUM_USERS = (parseInt(__ENV.USERS_PER_WAREHOUSE) || 10) * NUM_WAREHOUSES;
 const COMPANY = "The Company";
 
 export const options = {
