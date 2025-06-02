@@ -1,6 +1,7 @@
 import http from "k6/http";
 import { group, sleep, check } from "k6";
 import { Trend } from "k6/metrics";
+import exec from "k6/execution";
 
 const get_doc_trend = new Trend("get_doc");
 const load_list_trend = new Trend("load_list");
@@ -65,7 +66,6 @@ export function sales_invoice_create(config) {
 			company: config.company,
 			customer: config.customers[getRandomInt(0, config.customers.length)],
 			due_date: tomorow_str,
-			naming_series: "ACC-SINV-.YYYY.-", // default
 			name: tmp_name,
 			status: "Draft",
 			debit_to: "Debtors - TC",
@@ -229,7 +229,11 @@ export function request(path, payload, trend, expected_status_code = 200) {
 		trend.add(res.timings.waiting);
 		let tests = {};
 		tests[trend.name] = (r) => r.status === expected_status_code;
-		check(res, tests);
+		let result = check(res, tests);
+		if (!result && __ENV.CI) {
+			console.log(JSON.stringify(res, null, 4));
+			exec.test.abort("Request failed in CI");
+		}
 	}
 	return res;
 }

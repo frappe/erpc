@@ -101,14 +101,19 @@ jobs:
         env:
           CI: "Yes"
 
-
       - name: Run K6
         working-directory: /home/runner/frappe-bench
         run: |
           bench use test_site
           bench start &>> bench_start.log &
           bench --site test_site setup-loadtest-data --n-items 10 --users-per-warehouse 1 --customers-per-warehouse 1
-          k6 run --vus 1 --throw -e BASE_URL=http://127.0.0.1:8000 ./apps/erpc/src/script.js
+          k6 run --vus 1 --throw ./apps/erpc/src/script.js
+        env:
+          CI: "Yes"
+          BASE_URL: "http://127.0.0.1:8000"
+          NUM_ITEMS: 10
+          CUSTOMERS_PER_WAREHOUSE: 1
+          USERS_PER_WAREHOUSE: 1
 
       - name: Show bench output
         working-directory: /home/runner/frappe-bench

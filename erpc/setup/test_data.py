@@ -93,9 +93,9 @@ class Setup:
 		"""Setup branch specific naming to minimize contention."""
 
 		naming_series = {
-			"Sales Invoice": "INV-.branch.-######",
-			"Delivery Note": "DN-.branch.-######",
-			"Payment Entry": "PE-.branch.-######",
+			"Sales Invoice": "INV-.branch.-.######",
+			"Delivery Note": "DN-.branch.-.######",
+			"Payment Entry": "PE-.branch.-.######",
 		}
 
 		for doctype, series in naming_series.items():
