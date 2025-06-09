@@ -70,12 +70,12 @@ export default function (data) {
 	sales_invoice_list();
 	// NOTE: I am assuming API style use case here.
 	// For manual entries the think time should be 10-60 seconds at least.
-	sleep(1);
+	sleep(Math.random() * 2);
 	let invoice = sales_invoice_create(data);
-	sleep(1);
+	sleep(Math.random() * 2);
 	invoice = sales_invoice_submit(data, invoice);
-	sleep(1);
+	sleep(Math.random() * 2);
 	invoice = sales_invoice_payment(data, invoice);
-	sleep(Math.random() * 2 + 1);
+	sleep(Math.random() * 2);
 	invoice = deliver_items(data, invoice);
 }
