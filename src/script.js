@@ -76,6 +76,6 @@ export default function (data) {
 	invoice = sales_invoice_submit(data, invoice);
 	sleep(1);
 	invoice = sales_invoice_payment(data, invoice);
-	sleep(2);
+	sleep(Math.random() * 2 + 1);
 	invoice = deliver_items(data, invoice);
 }
